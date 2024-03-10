@@ -10,7 +10,7 @@ def get_device():
 
 def one_hot_embedding(labels, num_classes=10):
     # Convert to One Hot Encoding
-    y = torch.eye(num_classes)
+    y = torch.eye(num_classes).to(labels.device)
     return y[labels]
 
 

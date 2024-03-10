@@ -106,7 +106,7 @@ def rotating_image_classification(
             prob = prob.flatten()
             preds = preds.flatten()
             classifications.append(preds[0].item())
-            lu.append(uncertainty.mean())
+            lu.append(uncertainty.mean().cpu().detach())
 
         else:
 
