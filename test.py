@@ -65,7 +65,7 @@ def test_single_image(model, img_path, uncertainty=False, device=None):
 
     fig.tight_layout()
 
-    plt.savefig("./results/{}".format(os.path.basename(img_path)))
+    plt.savefig("./results/MNIST/{}".format(os.path.basename(img_path)))
 
 
 def rotating_image_classification(

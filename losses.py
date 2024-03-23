@@ -67,19 +67,19 @@ def mse_loss(y, alpha, epoch_num, num_classes, annealing_step, device=None):
 
 
 def edl_loss(func, y, alpha, epoch_num, num_classes, annealing_step, device=None):
-    y = y.to(device)
-    alpha = alpha.to(device)
-    S = torch.sum(alpha, dim=1, keepdim=True)
+    y = y.to(device)    #[batch_size, num_classes]    
+    alpha = alpha.to(device)    #[batch_size, num_classes] 
+    S = torch.sum(alpha, dim=1, keepdim=True)   #[batch_size, 1] 
 
-    A = torch.sum(y * (func(S) - func(alpha)), dim=1, keepdim=True)
+    A = torch.sum(y * (func(S) - func(alpha)), dim=1, keepdim=True)     #[batch_size, 1]
 
     annealing_coef = torch.min(
         torch.tensor(1.0, dtype=torch.float32),
         torch.tensor(epoch_num / annealing_step, dtype=torch.float32),
-    )
+    )   # scalar
 
-    kl_alpha = (alpha - 1) * (1 - y) + 1
-    kl_div = annealing_coef * kl_divergence(kl_alpha, num_classes, device=device)
+    kl_alpha = (alpha - 1) * (1 - y) + 1    #[batch_size, num_classes] 
+    kl_div = annealing_coef * kl_divergence(kl_alpha, num_classes, device=device)   #[batch_size, 1]
     return A + kl_div
 
 
@@ -119,4 +119,4 @@ def edl_digamma_loss(
             torch.digamma, target, alpha, epoch_num, num_classes, annealing_step, device
         )
     )
-    return loss
+    return loss  # scalar

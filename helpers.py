@@ -4,7 +4,7 @@ import scipy.ndimage as nd
 
 def get_device():
     use_cuda = torch.cuda.is_available()
-    device = torch.device("cuda:0" if use_cuda else "cpu")
+    device = torch.device("cuda:2" if use_cuda else "cpu")
     return device
 
 

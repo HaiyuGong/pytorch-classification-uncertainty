@@ -4,7 +4,7 @@ import copy
 import time
 from helpers import get_device, one_hot_embedding
 from losses import relu_evidence
-
+from torch.utils.tensorboard import SummaryWriter
 
 def train_model(
     model,
@@ -17,7 +17,7 @@ def train_model(
     device=None,
     uncertainty=False,
 ):
-
+    writer = SummaryWriter(log_dir='logs/Ki67/run_True_digamma_lr_0.0001_bs_32_v4')
     since = time.time()
 
     if not device:
@@ -51,7 +51,7 @@ def train_model(
             for i, (inputs, labels) in enumerate(dataloaders[phase]):
 
                 inputs = inputs.to(device)
-                labels = labels.to(device)
+                labels = labels.to(device)  # [batch_size]
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -64,7 +64,8 @@ def train_model(
                         y = one_hot_embedding(labels, num_classes)
                         y = y.to(device)
                         outputs = model(inputs)
-                        _, preds = torch.max(outputs, 1)
+                        # print(outputs.shape)
+                        _, preds = torch.max(outputs, 1)    # [batch_size]
                         loss = criterion(
                             outputs, y.float(), epoch, num_classes, 10, device
                         )
@@ -111,6 +112,10 @@ def train_model(
             accuracy["epoch"].append(epoch)
             accuracy["phase"].append(phase)
 
+            # tensorboard logging
+            writer.add_scalar(f"Loss/{phase}", epoch_loss, epoch)
+            writer.add_scalar(f"Accuracy/{phase}", epoch_acc.item(), epoch)
+
             print(
                 "{} loss: {:.4f} acc: {:.4f}".format(
                     phase.capitalize(), epoch_loss, epoch_acc
@@ -136,4 +141,5 @@ def train_model(
     model.load_state_dict(best_model_wts)
     metrics = (losses, accuracy)
 
+    writer.close()
     return model, metrics

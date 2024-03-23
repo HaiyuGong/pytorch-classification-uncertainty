@@ -1,0 +1,25 @@
+
+model : resnet50  # 就支持这一个
+mode : train    # train, test, examples (To example MNIST data)
+epochs : 50     # Desired number of epochs.
+dropout : 0.5   # Whether to use dropout or not.
+uncertainty : True  # Whether to use uncertainty or not.
+dataset_name : Ki67
+num_classes : 5
+batch_size : 32
+device : "cuda:2"
+
+# If uncertainty is True, criterion must be in ['mse', 'digamma', 'log']
+# denoting Expected Mean Square Error, Expected Cross Entropy and Negative Log of the Expected Likelihood, respectively.
+# else criterion is 'cross_entropy' (by default, one option)
+criterion : digamma  
+
+# optimizer
+optimizer : adam   # 还不能改
+lr : 0.0001
+weight_decay : 0.005
+scheduler : step   # 还不能改
+step_size : 7
+gamma : 0.1
+
+result_dir : "./results" 
