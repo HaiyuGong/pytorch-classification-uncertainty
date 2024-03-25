@@ -1,6 +1,6 @@
 
 model : resnet50  # 就支持这一个
-mode : train    # train, test, examples (To example MNIST data)
+mode : test    # train, test
 epochs : 50     # Desired number of epochs.
 dropout : 0.5   # Whether to use dropout or not.
 uncertainty : True  # Whether to use uncertainty or not.
@@ -23,3 +23,7 @@ step_size : 7
 gamma : 0.1
 
 result_dir : "./results" 
+
+# tensorboard
+# tensorboard : True
+log_dir : "./logs/Ki67/run_True_digamma_lr_0.0001_pretain_v2"

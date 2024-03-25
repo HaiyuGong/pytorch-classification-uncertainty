@@ -12,12 +12,13 @@ def train_model(
     num_classes,
     criterion,
     optimizer,
+    log_dir,
     scheduler=None,
     num_epochs=25,
     device=None,
     uncertainty=False,
 ):
-    writer = SummaryWriter(log_dir='logs/Ki67/run_True_digamma_lr_0.0001_bs_32_v4')
+    writer = SummaryWriter(log_dir=log_dir)
     since = time.time()
 
     if not device:
@@ -48,7 +49,7 @@ def train_model(
             correct = 0
 
             # Iterate over data.
-            for i, (inputs, labels) in enumerate(dataloaders[phase]):
+            for i, (inputs, labels, _) in enumerate(dataloaders[phase]):
 
                 inputs = inputs.to(device)
                 labels = labels.to(device)  # [batch_size]
@@ -67,7 +68,7 @@ def train_model(
                         # print(outputs.shape)
                         _, preds = torch.max(outputs, 1)    # [batch_size]
                         loss = criterion(
-                            outputs, y.float(), epoch, num_classes, 10, device
+                            outputs, y.float(), epoch, num_classes, 30, device
                         )
 
                         match = torch.reshape(torch.eq(preds, labels).float(), (-1, 1))

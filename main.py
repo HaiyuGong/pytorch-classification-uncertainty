@@ -18,7 +18,7 @@ import os
 from helpers import get_device, rotate_img, one_hot_embedding
 from utils.data import build_data
 from train import train_model
-from test import rotating_image_classification, test_single_image
+from test import rotating_image_classification, test_single_image, test_Ki67
 from losses import edl_mse_loss, edl_digamma_loss, edl_log_loss, relu_evidence
 from lenet import LeNet
 
@@ -36,6 +36,23 @@ def main():
     dataloaders, digit_one = build_data(cfg['dataset_name'], batch_size=cfg['batch_size'])
     print("Load dataset successfully!")
 
+    num_epochs = cfg['epochs']
+    use_uncertainty = cfg['uncertainty']
+    num_classes = cfg['num_classes']
+
+    # get device
+    if torch.cuda.is_available():
+        device = torch.device(cfg['device'])
+    else:
+        raise ValueError("GPU Device not available.")
+    
+    # if cfg['model'] == 'LeNet':
+    # model = LeNet(dropout=cfg['dropout'])
+    # elif cfg['model'] == 'resnet50':
+    model = models.resnet50(num_classes=num_classes)
+    model.load_state_dict(torch.load(r'results/Ki67/model.pt')['model_state_dict'])
+    model = model.to(device)
+
     if cfg['mode']=='example':
         examples = enumerate(dataloaders["val"])
         batch_idx, (example_data, example_targets) = next(examples)
@@ -51,25 +68,9 @@ def main():
 
     elif cfg['mode']=='train':
 
-        num_epochs = cfg['epochs']
-        use_uncertainty = cfg['uncertainty']
-        num_classes = cfg['num_classes']
-
-        # get device
-        if torch.cuda.is_available():
-            device = torch.device(cfg['device'])
-        else:
-            raise ValueError("GPU Device not available.")
-        
-        # if cfg['model'] == 'LeNet':
-        # model = LeNet(dropout=cfg['dropout'])
-        # elif cfg['model'] == 'resnet50':
-        model = models.resnet50(num_classes=num_classes)
-        model = model.to(device)
-
         os.makedirs(os.path.join(cfg['result_dir'], cfg['dataset_name']), exist_ok=True)
         if use_uncertainty:
-            model_save_path=os.path.join(cfg['result_dir'], cfg['dataset_name'], 'model_uncertainty_{}.pt'.format(cfg['criterion']))
+            model_save_path=os.path.join(cfg['result_dir'], cfg['dataset_name'], 'model_uncertainty_{}_pretrain.pt'.format(cfg['criterion']))
             if cfg['criterion'] == 'digamma':
                 criterion = edl_digamma_loss
             elif cfg['criterion'] == 'log':
@@ -93,6 +94,7 @@ def main():
             num_classes,
             criterion,
             optimizer,
+            cfg['log_dir'],
             scheduler=exp_lr_scheduler,
             num_epochs=num_epochs,
             device=device,
@@ -109,39 +111,28 @@ def main():
 
     elif cfg['mode']=='test':
 
-        use_uncertainty = cfg['uncertainty']
-
-        # get device
-        if torch.cuda.is_available():
-            device = torch.device(cfg['device'])
-        else:
-            raise ValueError("GPU Device not available.")
-        
-        model = LeNet()
-        model = model.to(device)
-
-        optimizer = optim.Adam(model.parameters())
-
         if use_uncertainty:
-            model_save_path=os.path.join(cfg['result_dir'], cfg['dataset_name'], 'model_uncertainty_{}.pt'.format(cfg['criterion']))
-            filename = os.path.join(cfg['result_dir'], cfg['dataset_name'], 'rotate_uncertainty_{}.jpg'.format(cfg['criterion']))
+            model_save_path=os.path.join(cfg['result_dir'], cfg['dataset_name'], 'model_uncertainty_{}_pretrain.pt'.format(cfg['criterion']))
+            # filename = os.path.join(cfg['result_dir'], cfg['dataset_name'], 'rotate_uncertainty_{}.jpg'.format(cfg['criterion']))
         else:
             model_save_path=os.path.join(cfg['result_dir'], cfg['dataset_name'], 'model.pt')
             # checkpoint = torch.load("./results/model.pt")
-            filename = os.path.join(cfg['result_dir'], cfg['dataset_name'], 'rotate.jpg')
+            # filename = os.path.join(cfg['result_dir'], cfg['dataset_name'], 'rotate.jpg')
         checkpoint = torch.load(model_save_path)
 
         model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        # optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
         model.eval()
 
-        rotating_image_classification(
-            model, digit_one, filename, uncertainty=use_uncertainty
-        )
+        test_Ki67(model,dataloaders,use_uncertainty,phase='test',device=device)
 
-        test_single_image(model, "../data/MNIST/one.jpg", uncertainty=use_uncertainty)
-        test_single_image(model, "../data/MNIST/yoda.jpg", uncertainty=use_uncertainty)
+        # rotating_image_classification(
+        #     model, digit_one, filename, uncertainty=use_uncertainty
+        # )
+
+        # test_single_image(model, "../data/MNIST/one.jpg", uncertainty=use_uncertainty)
+        # test_single_image(model, "../data/MNIST/yoda.jpg", uncertainty=use_uncertainty)
 
 
 if __name__ == "__main__":

@@ -6,8 +6,12 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 from PIL import Image
+from sklearn.metrics import confusion_matrix
+import pandas as pd
+
 from losses import relu_evidence
 from helpers import rotate_img, one_hot_embedding, get_device
+
 
 
 def test_single_image(model, img_path, uncertainty=False, device=None):
@@ -156,3 +160,65 @@ def rotating_image_classification(
     axs[2].set_ylabel("Classification Probability")
 
     plt.savefig(filename)
+
+def test_Ki67(model,dataloaders,uncertainty,phase='test',device=None):
+
+    if not device:
+        device = get_device()
+    gd_list, pred_list=[],[]
+    result_df=pd.DataFrame(columns=["name","gd","pred","ki67","match","uncertainty"])
+    num_classes = 5
+    running_corrects = 0.0
+    with torch.no_grad():
+        for i, (inputs, labels, sup) in enumerate(dataloaders[phase]):
+            inputs = inputs.to(device)
+            gd_list+=labels.clone().cpu().tolist()
+            labels = labels.to(device)  # [batch_size]
+            name=sup[0]
+            ki67=sup[1]
+            if uncertainty:
+                y = one_hot_embedding(labels, num_classes)
+                y = y.to(device)
+                outputs = model(inputs)
+                # print(outputs.shape)
+                _, preds = torch.max(outputs, 1)    # [batch_size]
+                pred_list += preds.clone().cpu().tolist()
+
+
+                match = torch.reshape(torch.eq(preds, labels).float(), (-1, 1))
+                acc = torch.mean(match)
+                evidence = relu_evidence(outputs)
+                alpha = evidence + 1
+                u = num_classes / torch.sum(alpha, dim=1, keepdim=True)
+
+                result_df=pd.concat([result_df,pd.DataFrame({
+                    "name": name,
+                    "ki67": ki67,
+                    "pred": preds.clone().cpu().tolist(),
+                    "gd": labels.clone().cpu().tolist(), 
+                    "match": match[:,0].clone().cpu().tolist(),
+                    "uncertainty": u[:,0].clone().cpu().tolist()})])
+
+                total_evidence = torch.sum(evidence, 1, keepdim=True)
+                mean_evidence = torch.mean(total_evidence)
+                mean_evidence_succ = torch.sum(
+                    torch.sum(evidence, 1, keepdim=True) * match
+                ) / torch.sum(match + 1e-20)
+                mean_evidence_fail = torch.sum(
+                    torch.sum(evidence, 1, keepdim=True) * (1 - match)
+                ) / (torch.sum(torch.abs(1 - match)) + 1e-20)
+
+            else:
+                outputs = model(inputs)
+                _, preds = torch.max(outputs, 1)
+
+            running_corrects += torch.sum(preds == labels.data)
+    
+    epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+    print("Accuracy: ",epoch_acc)
+    result_df.to_csv("./results/Ki67/{}_result.csv".format(phase),index=False)
+    # conf_matrix = confusion_matrix(result_df["gd"],result_df["pred"])
+    conf_matrix = pd.crosstab(gd_list,pred_list)
+    print("Confusion Matrix:")
+    print(conf_matrix)
+    

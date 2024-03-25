@@ -115,7 +115,7 @@ class Ki67Dataset(torch.utils.data.Dataset):
     """
     def __init__(self, state="train", resize_size=375, data_dir="/root/pj/data/KI67Patch/"):
         '''
-        state: "train" , "val" or "test
+        state: "train" , "val" or "test"
         '''
         # self.state = state
         self.resize_size = resize_size
@@ -135,7 +135,7 @@ class Ki67Dataset(torch.utils.data.Dataset):
         img=torch.tensor(np.array(img)).permute(2,0,1)/255.0
 
         label = row["class_id"]
-        return img, label
+        return img, label, (row["slide_name"]+ "_" + str(row['patch_idx']), row['ki67'])
 
 if __name__ == "__main__":
     dataset = Ki67Dataset(state="train")
